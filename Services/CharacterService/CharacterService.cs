@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using API_RPG.Dtos.CharacterDtos;
+using AutoMapper;
 
 namespace API_RPG.Services.CharacterService
 {
@@ -9,36 +11,80 @@ namespace API_RPG.Services.CharacterService
     {
           private static List<Character> characters = new List<Character> 
         {
-            new Character(){Id = 1, Name = "Simbus"},
+            new Character(){Id = 1, Name = "Shlang"},
            
         };
-        public async Task<ServiceResponse<List<Character>>> AddCharacter(Character newCharacter)
-        {
-            var serviceResponse = new ServiceResponse<List<Character>>();
+        private readonly IMapper mapper;
 
-           characters.Add(newCharacter);
-           serviceResponse.Data = characters;
-           return serviceResponse;
+        public CharacterService(IMapper mapper)
+        {
+            this.mapper = mapper;
+        }
+        public async Task<ServiceResponse<List<GetCharacterDto>>> AddCharacter(AddCharacterDto newCharacter)
+        {
+            var serviceResponse = new ServiceResponse<List<GetCharacterDto>>();
+           Character character = mapper.Map<Character>(newCharacter);
+           character.Id = characters.Max(c => c.Id)+ 1;
+           characters.Add(character);
+
+
+           serviceResponse.Data = characters.Select(c => mapper.Map<GetCharacterDto>(c)).ToList();
+           return serviceResponse; 
         }
 
-        public async Task<ServiceResponse<List<Character>>> GetAllCharacter()
+        public async Task<ServiceResponse<List<GetCharacterDto>>> DeleteCharacter(int id)
         {
-            return new ServiceResponse<List<Character>>{Data = characters};
+           ServiceResponse<List<GetCharacterDto>>response = new ServiceResponse<List<GetCharacterDto>>();
+           try
+           {
+                Character character = characters.First(c => c.Id == id);
+                characters.Remove(character);
+                response.Data = characters.Select(c => mapper.Map<GetCharacterDto>(c)).ToList();
+           }
+           catch (Exception ex)
+           {
+            response.Success = false; 
+            response.Message = ex.Message;
+           
+           }
+           return response;
+
         }
 
-        public async Task<ServiceResponse<Character>> GetCharacterById(int id)
+        public async Task<ServiceResponse<List<GetCharacterDto>>> GetAllCharacter()
         {
-            var serviceResponse = new ServiceResponse<Character>();
-            var character = characters.FirstOrDefault(c => c.Id == id);
-            serviceResponse.Data = character;
-
-            if(character == null)
+            return new ServiceResponse<List<GetCharacterDto>>
             {
-                serviceResponse.Message = "User not found";
-                return serviceResponse;
-            }
+                Data = characters.Select(c => mapper.Map<GetCharacterDto>(c)).ToList()
+            };
+        }
+        public async Task<ServiceResponse<GetCharacterDto>> GetCharacterById(int id)
+        {
+            var serviceResponse = new ServiceResponse<GetCharacterDto>();
+            var character = characters.FirstOrDefault(c => c.Id == id);
+            serviceResponse.Data = mapper.Map<GetCharacterDto>(character);  
             
             return serviceResponse;
         }
+
+        public async Task<ServiceResponse<GetCharacterDto>> UpdateCharacter(UpdateCharacterDto UpdatedCharacter)
+        {
+            ServiceResponse<GetCharacterDto> response = new ServiceResponse<GetCharacterDto>();
+            try
+            {
+                Character character = characters.FirstOrDefault(c => c.Id == UpdatedCharacter.Id);
+                mapper.Map(UpdatedCharacter, character);
+                response.Data = mapper.Map<GetCharacterDto>(character);
+            }
+            catch (Exception ex)
+            {
+                response.Success = false;
+                response.Message = ex.Message;
+               
+            }
+            
+            return response;
+        }
+
     }
 }
